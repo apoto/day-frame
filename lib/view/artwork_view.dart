@@ -4,15 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_localization/flutter_localization.dart';
+import 'package:day_frame/l10n/app_locale.dart';
 
 class ArtworkView extends ConsumerWidget {
-  const ArtworkView({Key? key}) : super(key: key);
+  const ArtworkView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final artworkState = ref.watch(artworkViewModelProvider);
+    final FlutterLocalization localization = FlutterLocalization.instance;
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text(AppLocale.title.getString(context)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.language),
+            onPressed: () => _showLanguageDialog(context, localization),
+          ),
+        ],
+      ),
       body: artworkState.when(
         data: (artwork) => _buildArtworkDisplay(context, artwork),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -34,6 +46,37 @@ class ArtworkView extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLanguageDialog(
+      BuildContext context, FlutterLocalization localization) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(AppLocale.selectLanguage.getString(context)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('English'),
+                onTap: () {
+                  localization.translate('en');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('日本語'),
+                onTap: () {
+                  localization.translate('ja');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -64,8 +107,7 @@ class ArtworkView extends ConsumerWidget {
 class ArtworkDetailsWidget extends StatelessWidget {
   final Artwork artwork;
 
-  const ArtworkDetailsWidget({Key? key, required this.artwork})
-      : super(key: key);
+  const ArtworkDetailsWidget({super.key, required this.artwork});
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +124,7 @@ class ArtworkDetailsWidget extends StatelessWidget {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _launchArtworkURL(artwork.id),
-            child: const Text('作品詳細を見る'),
+            child: Text(AppLocale.viewArtworkDetails.getString(context)),
           ),
         ],
       ),
