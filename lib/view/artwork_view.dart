@@ -3,6 +3,7 @@ import 'package:day_frame/view_model/artwork_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ArtworkView extends ConsumerWidget {
   const ArtworkView({Key? key}) : super(key: key);
@@ -24,7 +25,9 @@ class ArtworkView extends ConsumerWidget {
               Text('エラーが発生しました: $error'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.read(artworkViewModelProvider.notifier).fetchDailyArtwork(),
+                onPressed: () => ref
+                    .read(artworkViewModelProvider.notifier)
+                    .fetchDailyArtwork(),
                 child: const Text('再試行'),
               ),
             ],
@@ -42,8 +45,10 @@ class ArtworkView extends ConsumerWidget {
         fit: BoxFit.cover,
         height: double.infinity,
         width: double.infinity,
-        placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-        errorWidget: (context, url, error) => const Center(child: Icon(Icons.error)),
+        placeholder: (context, url) =>
+            const Center(child: CircularProgressIndicator()),
+        errorWidget: (context, url, error) =>
+            const Center(child: Icon(Icons.error)),
       ),
     );
   }
@@ -59,7 +64,8 @@ class ArtworkView extends ConsumerWidget {
 class ArtworkDetailsWidget extends StatelessWidget {
   final Artwork artwork;
 
-  const ArtworkDetailsWidget({Key? key, required this.artwork}) : super(key: key);
+  const ArtworkDetailsWidget({Key? key, required this.artwork})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -75,13 +81,23 @@ class ArtworkDetailsWidget extends StatelessWidget {
           Text(artwork.description),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              // アーティストのSNSへ遷移する処理を実装
-            },
-            child: const Text('アーティストのSNSを見る'),
+            onPressed: () => _launchArtworkURL(artwork.id),
+            child: const Text('作品詳細を見る'),
           ),
         ],
       ),
     );
+  }
+
+  void _launchArtworkURL(String artworkId) async {
+    final url = Uri.parse('https://www.artic.edu/artworks/$artworkId');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      print('Could not launch $url');
+    }
   }
 }
