@@ -2,6 +2,7 @@ import 'package:day_frame/model/artwork.dart';
 import 'package:day_frame/view_model/artwork_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ArtworkView extends ConsumerWidget {
   const ArtworkView({Key? key}) : super(key: key);
@@ -14,7 +15,21 @@ class ArtworkView extends ConsumerWidget {
       body: artworkState.when(
         data: (artwork) => _buildArtworkDisplay(context, artwork),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('エラー: $error')),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('エラーが発生しました: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.read(artworkViewModelProvider.notifier).fetchDailyArtwork(),
+                child: const Text('再試行'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -22,12 +37,13 @@ class ArtworkView extends ConsumerWidget {
   Widget _buildArtworkDisplay(BuildContext context, Artwork artwork) {
     return GestureDetector(
       onTap: () => _showArtworkDetails(context, artwork),
-      child: Image.network(
-        artwork.imageUrl,
+      child: CachedNetworkImage(
+        imageUrl: artwork.imageUrl,
         fit: BoxFit.cover,
         height: double.infinity,
         width: double.infinity,
-        alignment: Alignment.center,
+        placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+        errorWidget: (context, url, error) => const Center(child: Icon(Icons.error)),
       ),
     );
   }
