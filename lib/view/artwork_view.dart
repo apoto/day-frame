@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_localization/flutter_localization.dart';
 import 'package:day_frame/l10n/app_locale.dart';
+import 'package:day_frame/view/settings_view.dart';
 
 class ArtworkView extends ConsumerWidget {
   const ArtworkView({super.key});
@@ -13,70 +14,13 @@ class ArtworkView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final artworkState = ref.watch(artworkViewModelProvider);
-    final FlutterLocalization localization = FlutterLocalization.instance;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocale.title.getString(context)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.language),
-            onPressed: () => _showLanguageDialog(context, localization),
-          ),
-        ],
-      ),
       body: artworkState.when(
         data: (artwork) => _buildArtworkDisplay(context, artwork),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 60, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('エラーが発生しました: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref
-                    .read(artworkViewModelProvider.notifier)
-                    .fetchDailyArtwork(),
-                child: const Text('再試行'),
-              ),
-            ],
-          ),
-        ),
+        error: (error, _) => _buildErrorDisplay(context, ref, error),
       ),
-    );
-  }
-
-  void _showLanguageDialog(
-      BuildContext context, FlutterLocalization localization) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(AppLocale.selectLanguage.getString(context)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('English'),
-                onTap: () {
-                  localization.translate('en');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('日本語'),
-                onTap: () {
-                  localization.translate('ja');
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -96,10 +40,49 @@ class ArtworkView extends ConsumerWidget {
     );
   }
 
+  Widget _buildErrorDisplay(BuildContext context, WidgetRef ref, Object error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 60, color: Colors.red),
+          const SizedBox(height: 16),
+          Text('エラーが発生しました: $error'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => ref
+                .read(artworkViewModelProvider.notifier)
+                .fetchDailyArtwork(),
+            child: const Text('再試行'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsView()),
+    );
+  }
+
   void _showArtworkDetails(BuildContext context, Artwork artwork) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => ArtworkDetailsWidget(artwork: artwork),
+      builder: (context) => Stack(
+        children: [
+          ArtworkDetailsWidget(artwork: artwork),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () => _navigateToSettings(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
