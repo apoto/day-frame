@@ -8,25 +8,42 @@ import 'package:flutter_localization/flutter_localization.dart';
 import 'package:day_frame/l10n/app_locale.dart';
 import 'package:day_frame/view/settings_view.dart';
 
+import 'dart:ui';
+
+final isDetailsVisibleProvider = StateNotifierProvider<DetailsVisibilityNotifier, bool>((ref) => DetailsVisibilityNotifier());
+
+class DetailsVisibilityNotifier extends StateNotifier<bool> {
+  DetailsVisibilityNotifier() : super(false);
+
+  void toggle() => state = !state;
+}
+
 class ArtworkView extends ConsumerWidget {
   const ArtworkView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final artworkState = ref.watch(artworkViewModelProvider);
+    final isDetailsVisible = ref.watch(isDetailsVisibleProvider);
 
     return Scaffold(
-      body: artworkState.when(
-        data: (artwork) => _buildArtworkDisplay(context, artwork),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _buildErrorDisplay(context, ref, error),
+      body: Stack(
+        children: [
+          artworkState.when(
+            data: (artwork) => _buildArtworkDisplay(context, ref, artwork),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _buildErrorDisplay(context, ref, error),
+          ),
+          if (isDetailsVisible)
+            _buildOverlay(context, artworkState, ref),
+        ],
       ),
     );
   }
 
-  Widget _buildArtworkDisplay(BuildContext context, Artwork artwork) {
+  Widget _buildArtworkDisplay(BuildContext context, WidgetRef ref, Artwork artwork) {
     return GestureDetector(
-      onTap: () => _showArtworkDetails(context, artwork),
+      onTap: () => ref.read(isDetailsVisibleProvider.notifier).toggle(),
       child: CachedNetworkImage(
         imageUrl: artwork.imageUrl,
         fit: BoxFit.cover,
@@ -36,6 +53,40 @@ class ArtworkView extends ConsumerWidget {
             const Center(child: CircularProgressIndicator()),
         errorWidget: (context, url, error) =>
             const Center(child: Icon(Icons.error)),
+      ),
+    );
+  }
+
+  Widget _buildOverlay(BuildContext context, AsyncValue<Artwork> artworkState, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => ref.read(isDetailsVisibleProvider.notifier).toggle(),
+      child: Container(
+        color: Colors.black.withOpacity(0.5),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Stack(
+            children: [
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: artworkState.when(
+                  data: (artwork) => ArtworkDetailsWidget(artwork: artwork),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  onPressed: () => _navigateToSettings(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -66,25 +117,6 @@ class ArtworkView extends ConsumerWidget {
       MaterialPageRoute(builder: (context) => const SettingsView()),
     );
   }
-
-  void _showArtworkDetails(BuildContext context, Artwork artwork) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Stack(
-        children: [
-          ArtworkDetailsWidget(artwork: artwork),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () => _navigateToSettings(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class ArtworkDetailsWidget extends StatelessWidget {
@@ -96,14 +128,15 @@ class ArtworkDetailsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
+      color: Colors.black.withOpacity(0.7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(artwork.title, style: Theme.of(context).textTheme.headline6),
-          Text(artwork.artist, style: Theme.of(context).textTheme.subtitle1),
+          Text(artwork.title, style: Theme.of(context).textTheme.headline6?.copyWith(color: Colors.white)),
+          Text(artwork.artist, style: Theme.of(context).textTheme.subtitle1?.copyWith(color: Colors.white70)),
           const SizedBox(height: 8),
-          Text(artwork.description),
+          Text(artwork.description, style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _launchArtworkURL(artwork.id),
